@@ -373,7 +373,7 @@
           headers['Authorization'] = 'Bearer ' + token
         }
 
-        const res = await fetch('http://localhost:3000/api/stock/' + symbol, {
+        const res = await fetch('https://westens-production.up.railway.app/api/stock/' + symbol, {
           method: 'GET',
           headers: headers
         })

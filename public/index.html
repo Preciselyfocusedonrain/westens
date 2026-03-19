@@ -376,7 +376,7 @@
 
     async function fetchSuggestions(query) {
       try {
-        const res = await fetch(`http://localhost:3000/api/search/${encodeURIComponent(query)}`)
+        const res = await fetch(`https://westens-production.up.railway.app/api/search/${encodeURIComponent(query)}`)
         const data = await res.json()
         const box = document.getElementById('autocompleteBox')
 
