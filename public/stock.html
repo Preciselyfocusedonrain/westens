@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Analysis - Westens</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-color: #0a0a0a;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      border-bottom: 1px solid #1e1e1e;
+      background: #0d0d0d;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #f0a500;
+      letter-spacing: 2px;
+      text-decoration: none;
+    }
+
+    .nav-right { display: flex; align-items: center; gap: 20px; }
+    .nav-right span { color: #888; font-size: 14px; }
+    .nav-right a { color: #f0a500; text-decoration: none; font-size: 14px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px;
+      color: #666;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #1e1e1e;
+      border-top-color: #f0a500;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .stock-title h1 { font-size: 36px; color: #fff; }
+    .stock-title .symbol { color: #f0a500; font-size: 18px; margin-top: 4px; }
+    .stock-title .exchange { color: #555; font-size: 13px; margin-top: 4px; }
+
+    .stock-price { text-align: right; }
+    .stock-price .price { font-size: 42px; font-weight: 700; color: #fff; }
+    .stock-price .change { font-size: 16px; margin-top: 6px; }
+    .positive { color: #2ecc71; }
+    .negative { color: #e74c3c; }
+
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
+
+    .card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .card h3 {
+      font-size: 13px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .metric-value { font-size: 26px; font-weight: 700; color: #fff; }
+
+    .dcf-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .dcf-card h3 {
+      font-size: 13px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    .dcf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .dcf-item { text-align: center; }
+    .dcf-item .value { font-size: 28px; font-weight: 700; }
+    .dcf-item .label { font-size: 12px; color: #666; margin-top: 6px; }
+
+    .table-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .table-card h3 {
+      font-size: 13px;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { color: #555; font-weight: 500; padding: 10px; text-align: right; border-bottom: 1px solid #1e1e1e; }
+    th:first-child { text-align: left; }
+    td { padding: 10px; text-align: right; border-bottom: 1px solid #111; color: #ccc; }
+    td:first-child { text-align: left; color: #888; }
+    tr:hover td { background: #141414; }
+
+    .eps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .eps-item {
+      background: #141414;
+      border: 1px solid #1e1e1e;
+      border-radius: 6px;
+      padding: 16px;
+      text-align: center;
+    }
+    .eps-item .period { font-size: 11px; color: #555; margin-bottom: 8px; }
+    .eps-item .actual { font-size: 20px; font-weight: 700; color: #fff; }
+    .eps-item .estimate { font-size: 12px; color: #666; margin-top: 4px; }
+    .eps-item .beat { color: #2ecc71; font-size: 11px; margin-top: 4px; }
+    .eps-item .miss { color: #e74c3c; font-size: 11px; margin-top: 4px; }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      margin: 40px 0 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .news-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .news-item {
+      background: #141414;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+    .news-item:hover { border-color: #f0a500; }
+    .news-source { font-size: 11px; color: #f0a500; margin-bottom: 8px; text-transform: uppercase; }
+    .news-headline { font-size: 15px; color: #e0e0e0; line-height: 1.4; margin-bottom: 8px; }
+    .news-date { font-size: 11px; color: #555; }
+
+    .analyst-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .analyst-item {
+      background: #141414;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .analyst-period { font-size: 12px; color: #666; margin-bottom: 12px; }
+    .analyst-buy { color: #2ecc71; font-size: 22px; font-weight: 700; }
+    .analyst-hold { color: #f0a500; font-size: 22px; font-weight: 700; }
+    .analyst-sell { color: #e74c3c; font-size: 22px; font-weight: 700; }
+
+    .insider-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .insider-table th { color: #555; padding: 10px; text-align: left; border-bottom: 1px solid #1e1e1e; }
+    .insider-table td { padding: 10px; border-bottom: 1px solid #111; color: #ccc; }
+    .insider-table tr:hover td { background: #141414; }
+    .buy-tag { color: #2ecc71; font-weight: 600; }
+    .sell-tag { color: #e74c3c; font-weight: 600; }
+
+    .guest-banner {
+      background: #1a1500;
+      border: 1px solid #f0a500;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .guest-banner p { color: #aaa; font-size: 14px; }
+    .guest-banner p strong { color: #f0a500; }
+    .guest-banner a {
+      background: #f0a500;
+      color: #000;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+      margin-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="logo">WESTENS</a>
+    <div class="nav-right">
+      <span id="userName"></span>
+      <a href="/">← Search Again</a>
+      <a href="#" onclick="logout()" id="logoutBtn" style="display:none">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Analyzing stock data...</p>
+    </div>
+
+    <div id="content" style="display:none">
+
+      <div class="guest-banner" id="guestBanner" style="display:none">
+        <p>You're viewing <strong>limited data</strong> as a guest. Create a free account to unlock all data!</p>
+        <a href="register.html">Create Free Account →</a>
+      </div>
+
+      <div class="stock-header">
+        <div class="stock-title">
+          <h1 id="stockName"></h1>
+          <div class="symbol" id="stockSymbol"></div>
+          <div class="exchange" id="stockExchange"></div>
+        </div>
+        <div class="stock-price">
+          <div class="price" id="stockPrice"></div>
+          <div class="change" id="stockChange"></div>
+        </div>
+      </div>
+
+      <div class="section-title">Key Metrics</div>
+      <div class="grid-4">
+        <div class="card"><h3>Market Cap</h3><div class="metric-value" id="marketCap">-</div></div>
+        <div class="card"><h3>P/E Ratio</h3><div class="metric-value" id="peRatio">-</div></div>
+        <div class="card"><h3>52W High</h3><div class="metric-value" id="weekHigh">-</div></div>
+        <div class="card"><h3>52W Low</h3><div class="metric-value" id="weekLow">-</div></div>
+      </div>
+      <div class="grid-4">
+        <div class="card"><h3>Beta</h3><div class="metric-value" id="beta">-</div></div>
+        <div class="card"><h3>EPS (TTM)</h3><div class="metric-value" id="epsTTM">-</div></div>
+        <div class="card"><h3>Dividend Yield</h3><div class="metric-value" id="dividendYield">-</div></div>
+        <div class="card"><h3>Profit Margin</h3><div class="metric-value" id="profitMargin">-</div></div>
+      </div>
+
+      <div id="fullData">
+        <div class="section-title">DCF Valuation</div>
+        <div class="dcf-card">
+          <h3>Discounted Cash Flow Analysis</h3>
+          <div class="dcf-grid">
+            <div class="dcf-item"><div class="value" id="dcfValue">-</div><div class="label">Estimated Fair Value</div></div>
+            <div class="dcf-item"><div class="value" id="dcfCurrentPrice">-</div><div class="label">Current Market Price</div></div>
+            <div class="dcf-item"><div class="value" id="dcfUpside">-</div><div class="label">Upside / Downside</div></div>
+          </div>
+        </div>
+
+        <div class="section-title">EPS History</div>
+        <div class="table-card">
+          <h3>Earnings Per Share — Actual vs Estimate</h3>
+          <div class="eps-grid" id="epsGrid"></div>
+        </div>
+
+        <div class="section-title">Income Statement</div>
+        <div class="table-card">
+          <h3>Annual — Last 4 Years (USD)</h3>
+          <table>
+            <thead><tr><th>Metric</th><th id="incY1"></th><th id="incY2"></th><th id="incY3"></th><th id="incY4"></th></tr></thead>
+            <tbody id="incomeBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Balance Sheet</div>
+        <div class="table-card">
+          <h3>Annual — Last 4 Years (USD)</h3>
+          <table>
+            <thead><tr><th>Metric</th><th id="balY1"></th><th id="balY2"></th><th id="balY3"></th><th id="balY4"></th></tr></thead>
+            <tbody id="balanceBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Cash Flow Statement</div>
+        <div class="table-card">
+          <h3>Annual — Last 4 Years (USD)</h3>
+          <table>
+            <thead><tr><th>Metric</th><th id="cfY1"></th><th id="cfY2"></th><th id="cfY3"></th><th id="cfY4"></th></tr></thead>
+            <tbody id="cashflowBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Latest News</div>
+        <div class="news-grid" id="newsGrid"></div>
+
+        <div class="section-title">Analyst Ratings</div>
+        <div class="analyst-grid" id="analystGrid"></div>
+
+        <div class="section-title">Insider Trading</div>
+        <div class="table-card">
+          <h3>Recent insider transactions</h3>
+          <table class="insider-table">
+            <thead><tr><th>Name</th><th>Title</th><th>Action</th><th>Shares</th><th>Value</th><th>Date</th></tr></thead>
+            <tbody id="insiderBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('westens_token')
+    const user = JSON.parse(localStorage.getItem('westens_user') || '{}')
+    const params = new URLSearchParams(window.location.search)
+    const symbol = params.get('symbol')
+
+    if (!symbol) window.location.href = '/'
+
+    if (user.name) {
+      document.getElementById('userName').textContent = 'Hi, ' + user.name
+      document.getElementById('logoutBtn').style.display = 'block'
+    }
+
+    function logout() {
+      localStorage.clear()
+      window.location.href = '/'
+    }
+
+    function formatNum(val) {
+      if (!val || val === 'None') return '-'
+      const n = parseFloat(val)
+      if (isNaN(n)) return '-'
+      if (Math.abs(n) >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T'
+      if (Math.abs(n) >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B'
+      if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M'
+      return '$' + n.toFixed(2)
+    }
+
+    async function loadStock() {
+      try {
+        const headers = { 'Content-Type': 'application/json' }
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token
+        }
+
+        const res = await fetch('http://localhost:3000/api/stock/' + symbol, {
+          method: 'GET',
+          headers: headers
+        })
+
+        const data = await res.json()
+
+        if (!data.success) {
+          alert(data.message)
+          window.location.href = '/'
+          return
+        }
+
+        const d = data.data
+        const m = d.metrics
+
+        document.getElementById('stockName').textContent = d.name || symbol
+        document.getElementById('stockSymbol').textContent = d.symbol
+        document.getElementById('stockExchange').textContent = (d.exchange || '') + ' · ' + (d.currency || '')
+        document.getElementById('stockPrice').textContent = '$' + d.price.toFixed(2)
+
+        const change = d.price - d.previousClose
+        const changePct = ((change / d.previousClose) * 100).toFixed(2)
+        const changeEl = document.getElementById('stockChange')
+        changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + ' (' + changePct + '%)'
+        changeEl.className = 'change ' + (change >= 0 ? 'positive' : 'negative')
+
+        if (data.isGuest) {
+          document.getElementById('guestBanner').style.display = 'flex'
+          document.getElementById('fullData').style.display = 'none'
+        }
+
+        if (m) {
+          document.getElementById('marketCap').textContent = m.marketCapitalization ? '$' + (m.marketCapitalization / 1000).toFixed(2) + 'B' : '-'
+          document.getElementById('peRatio').textContent = m.peNormalizedAnnual ? m.peNormalizedAnnual.toFixed(2) : '-'
+          document.getElementById('weekHigh').textContent = m['52WeekHigh'] ? '$' + m['52WeekHigh'].toFixed(2) : '-'
+          document.getElementById('weekLow').textContent = m['52WeekLow'] ? '$' + m['52WeekLow'].toFixed(2) : '-'
+          document.getElementById('beta').textContent = m.beta ? m.beta.toFixed(2) : '-'
+          document.getElementById('epsTTM').textContent = m.epsTTM ? m.epsTTM.toFixed(2) : '-'
+          document.getElementById('dividendYield').textContent = m.currentDividendYieldTTM ? (m.currentDividendYieldTTM * 100).toFixed(2) + '%' : '-'
+          document.getElementById('profitMargin').textContent = m.netProfitMarginTTM ? m.netProfitMarginTTM.toFixed(2) + '%' : '-'
+        }
+
+        if (data.isGuest) {
+          document.getElementById('loading').style.display = 'none'
+          document.getElementById('content').style.display = 'block'
+          return
+        }
+
+        // DCF
+        document.getElementById('dcfValue').textContent = d.dcf && d.dcf.estimatedValue ? '$' + d.dcf.estimatedValue : '-'
+        document.getElementById('dcfCurrentPrice').textContent = '$' + d.price.toFixed(2)
+        if (d.dcf && d.dcf.upside) {
+          const upsideEl = document.getElementById('dcfUpside')
+          upsideEl.textContent = d.dcf.upside
+          upsideEl.className = 'value ' + (parseFloat(d.dcf.upside) >= 0 ? 'positive' : 'negative')
+        }
+
+        // EPS
+        if (d.eps && d.eps.length > 0) {
+          const epsGrid = document.getElementById('epsGrid')
+          d.eps.slice(0, 8).forEach(function(e) {
+            const beat = e.actual > e.estimate
+            epsGrid.innerHTML += '<div class="eps-item"><div class="period">' + e.period + ' Q' + e.quarter + ' ' + e.year + '</div><div class="actual">$' + (e.actual ? e.actual.toFixed(2) : '-') + '</div><div class="estimate">Est: $' + (e.estimate ? e.estimate.toFixed(2) : '-') + '</div><div class="' + (beat ? 'beat' : 'miss') + '">' + (beat ? '▲ Beat' : '▼ Miss') + '</div></div>'
+          })
+        }
+
+        // Income Statement
+        const inc = d.incomeStatement
+        if (inc && inc.length > 0) {
+          inc.forEach(function(y, i) { document.getElementById('incY' + (i+1)).textContent = y.fiscalDateEnding ? y.fiscalDateEnding.slice(0,4) : '' })
+          var incRows = [['Total Revenue','totalRevenue'],['Gross Profit','grossProfit'],['Operating Income','operatingIncome'],['Net Income','netIncome'],['EBITDA','ebitda']]
+          incRows.forEach(function(r) {
+            document.getElementById('incomeBody').innerHTML += '<tr><td>' + r[0] + '</td>' + inc.map(function(y){ return '<td>' + formatNum(y[r[1]]) + '</td>' }).join('') + '</tr>'
+          })
+        }
+
+        // Balance Sheet
+        const bal = d.balanceSheet
+        if (bal && bal.length > 0) {
+          bal.forEach(function(y, i) { document.getElementById('balY' + (i+1)).textContent = y.fiscalDateEnding ? y.fiscalDateEnding.slice(0,4) : '' })
+          var balRows = [['Total Assets','totalAssets'],['Total Liabilities','totalLiabilities'],['Total Equity','totalShareholderEquity'],['Cash & Equivalents','cashAndCashEquivalentsAtCarryingValue'],['Total Debt','shortLongTermDebtTotal']]
+          balRows.forEach(function(r) {
+            document.getElementById('balanceBody').innerHTML += '<tr><td>' + r[0] + '</td>' + bal.map(function(y){ return '<td>' + formatNum(y[r[1]]) + '</td>' }).join('') + '</tr>'
+          })
+        }
+
+        // Cash Flow
+        const cf = d.cashFlow
+        if (cf && cf.length > 0) {
+          cf.forEach(function(y, i) { document.getElementById('cfY' + (i+1)).textContent = y.fiscalDateEnding ? y.fiscalDateEnding.slice(0,4) : '' })
+          var cfRows = [['Operating Cash Flow','operatingCashflow'],['Capital Expenditures','capitalExpenditures'],['Dividends Paid','dividendPayout']]
+          cfRows.forEach(function(r) {
+            document.getElementById('cashflowBody').innerHTML += '<tr><td>' + r[0] + '</td>' + cf.map(function(y){ return '<td>' + formatNum(y[r[1]]) + '</td>' }).join('') + '</tr>'
+          })
+        }
+
+        // News
+        if (d.news && d.news.length > 0) {
+          const newsGrid = document.getElementById('newsGrid')
+          d.news.slice(0, 8).forEach(function(n) {
+            newsGrid.innerHTML += '<a class="news-item" href="' + n.url + '" target="_blank"><div class="news-source">' + n.source + '</div><div class="news-headline">' + n.headline + '</div><div class="news-date">' + new Date(n.datetime * 1000).toLocaleDateString() + '</div></a>'
+          })
+        }
+
+        // Analyst Ratings
+        if (d.analystRatings && d.analystRatings.length > 0) {
+          const analystGrid = document.getElementById('analystGrid')
+          d.analystRatings.slice(0, 6).forEach(function(a) {
+            analystGrid.innerHTML += '<div class="analyst-item"><div class="analyst-period">' + a.period + '</div><div style="display:flex;justify-content:space-around"><div><div class="analyst-buy">' + a.buy + '</div><div style="font-size:11px;color:#555;text-align:center">Buy</div></div><div><div class="analyst-hold">' + a.hold + '</div><div style="font-size:11px;color:#555;text-align:center">Hold</div></div><div><div class="analyst-sell">' + a.sell + '</div><div style="font-size:11px;color:#555;text-align:center">Sell</div></div></div></div>'
+          })
+        }
+
+        // Insider Trading
+        if (d.insiderTrading && d.insiderTrading.length > 0) {
+          const insiderBody = document.getElementById('insiderBody')
+          d.insiderTrading.slice(0, 15).forEach(function(t) {
+            const isBuy = t.transactionType === 'P-Purchase' || t.change > 0
+            insiderBody.innerHTML += '<tr><td>' + (t.name || '-') + '</td><td>' + (t.position || '-') + '</td><td class="' + (isBuy ? 'buy-tag' : 'sell-tag') + '">' + (isBuy ? '▲ Buy' : '▼ Sell') + '</td><td>' + (t.change ? Math.abs(t.change).toLocaleString() : '-') + '</td><td>' + (t.transactionPrice ? formatNum(t.transactionPrice * Math.abs(t.change)) : '-') + '</td><td>' + (t.filingDate || '-') + '</td></tr>'
+          })
+        }
+
+        document.getElementById('loading').style.display = 'none'
+        document.getElementById('content').style.display = 'block'
+
+      } catch (error) {
+        console.error(error)
+        alert('Error loading stock data. Please try again.')
+        window.location.href = '/'
+      }
+    }
+
+    loadStock()
+  </script>
+
+</body>
+</html>
